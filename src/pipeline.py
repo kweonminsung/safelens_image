@@ -16,6 +16,7 @@ from .models import (
     ReplacementMethod,
 )
 from .gemini_detector import GeminiDetector
+from .image_generator import ImageGenerator
 from .anonymizer import Anonymizer
 
 
@@ -35,8 +36,8 @@ class PrivacyPipeline:
         gemini_api_key: Optional[str] = None,
         min_confidence: float = 0.7,
         detection_model: str = "gemini-3-flash-preview",
-        generation_model: str = "gemini-3-flash-preview",
-        imagen_model: str = "imagen-3.0-generate-001",
+        generation_model: str = "gemini-1.5-flash",
+        imagen_model: str = "imagen-3.0-generate-002",
         default_face_method: ReplacementMethod = ReplacementMethod.BLUR,
         default_text_method: ReplacementMethod = ReplacementMethod.BLUR,
         upload_dir: str = "uploads",
@@ -60,12 +61,18 @@ class PrivacyPipeline:
         self.detector = GeminiDetector(
             api_key=gemini_api_key,
             min_confidence=min_confidence,
-            detection_model=detection_model,
+            detection_model=detection_model
+        )
+        
+        # Initialize Image Generator
+        self.generator = ImageGenerator(
+            api_key=gemini_api_key,
             generation_model=generation_model,
             imagen_model=imagen_model
         )
+        
         self.anonymizer = Anonymizer(
-            generator=self.detector,
+            generator=self.generator,
             default_face_method=default_face_method,
             default_text_method=default_text_method
         )
