@@ -1,1 +1,1 @@
-# SaveLens Image Privacy Sanitization Pipeline
+# SaveLens Image
