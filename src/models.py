@@ -14,6 +14,7 @@ class PIIType(str, Enum):
     EMAIL = "email"
     ADDRESS = "address"
     NAME = "name"
+    LICENSE_PLATE = "license_plate"
     ID_NUMBER = "id_number"
     CREDIT_CARD = "credit_card"
     DATE_OF_BIRTH = "date_of_birth"
@@ -102,28 +103,16 @@ class PIIDetection(BaseModel):
     detection_type: DetectionType = Field(default=DetectionType.TEXT_PII)
     pii_type: PIIType = Field(..., description="Type of PII detected")
     text: str = Field(..., description="The detected PII text")
-    polygon: Polygon = Field(..., description="Polygon region of the PII")
+    bbox: BoundingBox = Field(..., description="Bounding box of the PII")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Detection confidence")
-    
-    # For backward compatibility
-    @property
-    def bbox(self) -> BoundingBox:
-        """Get bounding box from polygon."""
-        return self.polygon.to_bbox()
 
 
 class FaceDetection(BaseModel):
-    """Detected face (polygon region only, no identity)."""
+    """Detected face (bounding box region only, no identity)."""
     detection_id: str = Field(..., description="Unique identifier for this detection")
     detection_type: DetectionType = Field(default=DetectionType.FACE)
-    polygon: Polygon = Field(..., description="Polygon region of the face")
+    bbox: BoundingBox = Field(..., description="Bounding box of the face")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Detection confidence")
-    
-    # For backward compatibility
-    @property
-    def bbox(self) -> BoundingBox:
-        """Get bounding box from polygon."""
-        return self.polygon.to_bbox()
 
 
 class DetectionResult(BaseModel):

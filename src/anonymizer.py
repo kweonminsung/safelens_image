@@ -7,9 +7,8 @@ from typing import List, Dict, Optional, Tuple, Union
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 import cv2
-
 from .models import (
-    Polygon,
+    BoundingBox,
     ReplacementMethod,
     PIIDetection,
     FaceDetection,
@@ -45,14 +44,14 @@ class Anonymizer:
     def anonymize_image(
         self,
         image: Image.Image,
-        replacements: List[Tuple[Polygon, ReplacementMethod, Optional[str]]]
+        replacements: List[Tuple[BoundingBox, ReplacementMethod, Optional[str]]]
     ) -> Image.Image:
         """
         Apply multiple anonymization replacements to an image.
         
         Args:
             image: Original PIL Image
-            replacements: List of (polygon, method, custom_data) tuples
+            replacements: List of (bbox, method, custom_data) tuples
             
         Returns:
             Anonymized PIL Image
@@ -68,7 +67,7 @@ class Anonymizer:
     def _apply_replacement(
         self,
         image: Image.Image,
-        region: Polygon,
+        region: BoundingBox,
         method: ReplacementMethod,
         custom_data: Optional[str] = None
     ) -> Image.Image:
@@ -94,29 +93,30 @@ class Anonymizer:
             # Default to black box for unknown methods
             return self._black_box(image, region)
     
-    def _get_region_mask(self, image: Image.Image, region: Polygon) -> Image.Image:
-        """Create a mask for the given polygon region."""
+    def _get_region_mask(self, image: Image.Image, region: BoundingBox) -> Image.Image:
+        """Create a mask for the given bounding box region."""
         mask = Image.new('L', image.size, 0)
         draw = ImageDraw.Draw(mask)
-        draw.polygon(region.points, fill=255)
+        x1, y1, x2, y2 = region.to_xyxy()
+        draw.rectangle([x1, y1, x2, y2], fill=255)
         return mask
     
-    def _mask_text(self, image: Image.Image, region: Polygon) -> Image.Image:
+    def _mask_text(self, image: Image.Image, region: BoundingBox) -> Image.Image:
         """Replace text with asterisks (****)."""
         result = image.copy()
         draw = ImageDraw.Draw(result)
         
-        # Get bounding box for text positioning
-        bbox = region.to_bbox()
+        # Get bounding box coordinates
+        x1, y1, x2, y2 = region.to_xyxy()
         
-        # Draw white filled region
-        draw.polygon(region.points, fill='white')
+        # Draw white filled rectangle
+        draw.rectangle([x1, y1, x2, y2], fill='white')
         
         # Draw asterisks
         mask_text = "****"
         try:
             # Try to use a reasonable font size
-            font_size = min(bbox.height - 4, 20)
+            font_size = min(region.height - 4, 20)
             font = ImageFont.truetype("arial.ttf", font_size)
         except:
             font = ImageFont.load_default()
@@ -126,9 +126,8 @@ class Anonymizer:
         text_width = text_bbox[2] - text_bbox[0]
         text_height = text_bbox[3] - text_bbox[1]
         
-        x1, y1, _, _ = bbox.to_xyxy()
-        text_x = x1 + (bbox.width - text_width) // 2
-        text_y = y1 + (bbox.height - text_height) // 2
+        text_x = x1 + (region.width - text_width) // 2
+        text_y = y1 + (region.height - text_height) // 2
         
         draw.text((text_x, text_y), mask_text, fill='black', font=font)
         
@@ -137,24 +136,24 @@ class Anonymizer:
     def _replace_with_synthetic_text(
         self, 
         image: Image.Image, 
-        region: Polygon,
+        region: BoundingBox,
         custom_text: Optional[str] = None
     ) -> Image.Image:
         """Replace text with custom synthetic text."""
         result = image.copy()
         draw = ImageDraw.Draw(result)
         
-        # Get bounding box for text positioning
-        bbox = region.to_bbox()
+        # Get bounding box coordinates
+        x1, y1, x2, y2 = region.to_xyxy()
         
         # Draw white background
-        draw.polygon(region.points, fill='white')
+        draw.rectangle([x1, y1, x2, y2], fill='white')
         
         # Use custom text or default
         text = custom_text if custom_text else "[REDACTED]"
         
         try:
-            font_size = min(bbox.height - 4, 16)
+            font_size = min(region.height - 4, 16)
             font = ImageFont.truetype("arial.ttf", font_size)
         except:
             font = ImageFont.load_default()
@@ -164,109 +163,102 @@ class Anonymizer:
         text_width = text_bbox[2] - text_bbox[0]
         text_height = text_bbox[3] - text_bbox[1]
         
-        x1, y1, _, _ = bbox.to_xyxy()
-        text_x = x1 + (bbox.width - text_width) // 2
-        text_y = y1 + (bbox.height - text_height) // 2
+        text_x = x1 + (region.width - text_width) // 2
+        text_y = y1 + (region.height - text_height) // 2
         
         draw.text((text_x, text_y), text, fill='gray', font=font)
         
         return result
     
-    def _redact_region(self, image: Image.Image, region: Polygon) -> Image.Image:
+    def _redact_region(self, image: Image.Image, region: BoundingBox) -> Image.Image:
         """Draw a solid black box over the region."""
         return self._black_box(image, region)
     
-    def _black_box(self, image: Image.Image, region: Polygon) -> Image.Image:
-        """Draw a black polygon over the region."""
+    def _black_box(self, image: Image.Image, region: BoundingBox) -> Image.Image:
+        """Draw a black rectangle over the region."""
         result = image.copy()
         draw = ImageDraw.Draw(result)
-        draw.polygon(region.points, fill='black')
+        x1, y1, x2, y2 = region.to_xyxy()
+        draw.rectangle([x1, y1, x2, y2], fill='black')
         return result
     
     def _blur_region(
         self, 
         image: Image.Image, 
-        region: Polygon,
+        region: BoundingBox,
         blur_radius: int = 15
     ) -> Image.Image:
         """Apply Gaussian blur to the region."""
         result = image.copy()
         
-        # Get bounding box for crop region
-        bbox = region.to_bbox()
-        x1, y1, x2, y2 = bbox.to_xyxy()
+        # Get bounding box coordinates
+        x1, y1, x2, y2 = region.to_xyxy()
         
         # Extract and blur region
         region_crop = result.crop((x1, y1, x2, y2))
         blurred = region_crop.filter(ImageFilter.GaussianBlur(radius=blur_radius))
         
-        # Apply mask for polygon
-        mask = self._get_region_mask(result, region)
-        mask_crop = mask.crop((x1, y1, x2, y2))
-        result.paste(blurred, (x1, y1), mask_crop)
+        # Paste back
+        result.paste(blurred, (x1, y1))
         
         return result
     
     def _pixelate_region(
         self, 
         image: Image.Image, 
-        region: Polygon,
+        region: BoundingBox,
         pixel_size: int = 10
     ) -> Image.Image:
         """Apply pixelation effect to the region."""
         result = image.copy()
         
-        # Get bounding box for crop region
-        bbox = region.to_bbox()
-        x1, y1, x2, y2 = bbox.to_xyxy()
+        # Get bounding box coordinates
+        x1, y1, x2, y2 = region.to_xyxy()
         
         # Extract region
         region_crop = result.crop((x1, y1, x2, y2))
         
         # Resize down and up to create pixelation effect
-        small_size = (max(1, bbox.width // pixel_size), max(1, bbox.height // pixel_size))
+        small_size = (max(1, region.width // pixel_size), max(1, region.height // pixel_size))
         pixelated = region_crop.resize(small_size, Image.NEAREST)
-        pixelated = pixelated.resize((bbox.width, bbox.height), Image.NEAREST)
+        pixelated = pixelated.resize((region.width, region.height), Image.NEAREST)
         
-        # Apply mask for polygon
-        mask = self._get_region_mask(result, region)
-        mask_crop = mask.crop((x1, y1, x2, y2))
-        result.paste(pixelated, (x1, y1), mask_crop)
+        # Paste back
+        result.paste(pixelated, (x1, y1))
         
         return result
     
     def _replace_with_emoji(
         self,
         image: Image.Image,
-        region: Polygon,
+        region: BoundingBox,
         emoji_type: Optional[str] = None
     ) -> Image.Image:
         """Replace region with an emoji."""
         result = image.copy()
         draw = ImageDraw.Draw(result)
         
-        # Get bounding box for positioning
-        bbox = region.to_bbox()
-        x1, y1, x2, y2 = bbox.to_xyxy()
+        # Get bounding box coordinates
+        x1, y1, x2, y2 = region.to_xyxy()
         
         # Draw light background
-        draw.polygon(region.points, fill='#f0f0f0')
+        draw.rectangle([x1, y1, x2, y2], fill='#f0f0f0')
         
         # Get emoji
         emoji = self.emoji_map.get(emoji_type, self.emoji_map['default'])
         
         # Try to draw emoji with large font
         try:
-            font_size = min(bbox.width, bbox.height) - 10
+            font_size = min(region.width, region.height) - 10
             font = ImageFont.truetype("seguiemj.ttf", font_size)  # Windows emoji font
         except:
             try:
                 font = ImageFont.truetype("Apple Color Emoji.ttc", font_size)  # macOS
             except:
                 # Fallback: just draw a circle
-                center_x = x1 + bbox.width // 2
-                center_y = y1 + bbox.height // 2
-                radius = min(bbox.width, bbox.height) // 3
+                center_x = x1 + region.width // 2
+                center_y = y1 + region.height // 2
+                radius = min(region.width, region.height) // 3
                 draw.ellipse(
                     [center_x - radius, center_y - radius, center_x + radius, center_y + radius],
                     fill='yellow',
@@ -280,14 +272,14 @@ class Anonymizer:
         text_width = text_bbox[2] - text_bbox[0]
         text_height = text_bbox[3] - text_bbox[1]
         
-        text_x = x1 + (bbox.width - text_width) // 2
-        text_y = y1 + (bbox.height - text_height) // 2
+        text_x = x1 + (region.width - text_width) // 2
+        text_y = y1 + (region.height - text_height) // 2
         
         draw.text((text_x, text_y), emoji, font=font, embedded_color=True)
         
         return result
     
-    def _inpaint_region(self, image: Image.Image, region: Polygon) -> Image.Image:
+    def _inpaint_region(self, image: Image.Image, region: BoundingBox) -> Image.Image:
         """
         Apply AI-based inpainting to the region.
         
@@ -302,10 +294,10 @@ class Anonymizer:
         img_array = np.array(image)
         img_cv = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
         
-        # Create mask from polygon
+        # Create mask from bounding box
         mask = np.zeros(img_array.shape[:2], dtype=np.uint8)
-        points = np.array(region.points, dtype=np.int32)
-        cv2.fillPoly(mask, [points], 255)
+        x1, y1, x2, y2 = region.to_xyxy()
+        mask[y1:y2, x1:x2] = 255
         
         # Apply inpainting (using Telea algorithm)
         inpainted = cv2.inpaint(img_cv, mask, inpaintRadius=3, flags=cv2.INPAINT_TELEA)
@@ -347,35 +339,21 @@ class Anonymizer:
         
         # Draw PII regions in red
         for pii in pii_detections:
-            if hasattr(pii, 'polygon') and pii.polygon:
-                # Draw polygon outline
-                draw.polygon(pii.polygon.points, outline='red', width=2)
-                bbox = pii.polygon.to_bbox()
-            else:
-                # Fallback to bounding box
-                bbox = pii.bbox
-                x1, y1, x2, y2 = bbox.to_xyxy()
-                draw.rectangle([x1, y1, x2, y2], outline='red', width=2)
+            bbox = pii.bbox
+            x1, y1, x2, y2 = bbox.to_xyxy()
+            draw.rectangle([x1, y1, x2, y2], outline='red', width=2)
             
             if show_labels:
-                x1, y1, _, _ = bbox.to_xyxy()
                 label = f"{pii.pii_type.value} ({pii.confidence:.2f})"
                 draw.text((x1, y1 - 15), label, fill='red', font=font)
         
         # Draw face regions in blue
         for face in face_detections:
-            if hasattr(face, 'polygon') and face.polygon:
-                # Draw polygon outline
-                draw.polygon(face.polygon.points, outline='blue', width=2)
-                bbox = face.polygon.to_bbox()
-            else:
-                # Fallback to bounding box
-                bbox = face.bbox
-                x1, y1, x2, y2 = bbox.to_xyxy()
-                draw.rectangle([x1, y1, x2, y2], outline='blue', width=2)
+            bbox = face.bbox
+            x1, y1, x2, y2 = bbox.to_xyxy()
+            draw.rectangle([x1, y1, x2, y2], outline='blue', width=2)
             
             if show_labels:
-                x1, y1, _, _ = bbox.to_xyxy()
                 label = f"Face ({face.confidence:.2f})"
                 draw.text((x1, y1 - 15), label, fill='blue', font=font)
         

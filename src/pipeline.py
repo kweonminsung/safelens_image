@@ -144,11 +144,11 @@ class PrivacyPipeline:
             if detection is None:
                 continue
             
-            polygon = detection.polygon
+            bbox = detection.bbox
             method = replacement_req.method
             custom_data = replacement_req.custom_text
             
-            replacements.append((polygon, method, custom_data))
+            replacements.append((bbox, method, custom_data))
             applied_ids.append(replacement_req.detection_id)
         
         # Apply anonymization

@@ -54,7 +54,8 @@ def main():
             print(f"   {i}. Type: {pii.pii_type.value}")
             print(f"      Text: {pii.text if pii.text else '(detected)'}")
             print(f"      Confidence: {pii.confidence:.2f}")
-            print(f"      Polygon: {len(pii.polygon.points)} points")
+            bbox = pii.bbox
+            print(f"      BBox: x={bbox.x}, y={bbox.y}, w={bbox.width}, h={bbox.height}")
     else:
         print("\n4. No PII detected")
     
@@ -62,14 +63,16 @@ def main():
         print("\n   Detected Faces:")
         for i, face in enumerate(result.face_detections, 1):
             print(f"   {i}. Confidence: {face.confidence:.2f}")
-            print(f"      Polygon: {len(face.polygon.points)} points")
+            bbox = face.bbox
+            print(f"      BBox: x={bbox.x}, y={bbox.y}, w={bbox.width}, h={bbox.height}")
     
     # Step 2: Create preview
     print("\n5. Creating preview with detection boxes...")
     preview = pipeline.create_preview(result.image_id, show_labels=True)
     if preview:
-        preview.save('example_preview.png')
-        print("✓ Preview saved as 'example_preview.png'")
+        preview_path = Path('outputs') / f'{result.image_id}_preview.png'
+        preview.save(preview_path)
+        print(f"✓ Preview saved as '{preview_path}'")
     
     # Step 3: Prepare anonymization
     print("\n6. Preparing anonymization request...")
@@ -102,16 +105,14 @@ def main():
     )
     
     anonymized_img, anon_result = pipeline.anonymize(request)
-    anonymized_img.save('example_anonymized.png')
     print("✓ Anonymization complete!")
     print(f"   {anon_result.message}")
     
     print("\n" + "=" * 60)
     print("Example complete! Generated files:")
     print(f"  - uploads/{result.image_id}.png: Original")
-    print(f"  - example_preview.png: Preview with boxes")
-    print(f"  - outputs/{result.image_id}_anonymized.png: Anonymized (saved)")
-    print(f"  - example_anonymized.png: Anonymized (copy)")
+    print(f"  - outputs/{result.image_id}_preview.png: Preview with boxes")
+    print(f"  - outputs/{result.image_id}_anonymized.png: Anonymized")
     print("=" * 60)
 
 
