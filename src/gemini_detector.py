@@ -19,7 +19,7 @@ from .models import (
     PIIType,
     DetectionType,
 )
-from .config import MIN_CONFIDENCE, DETECTION_MODEL
+from .config import DETECTION_MODEL, MIN_FACE_CONFIDENCE, MIN_TEXT_CONFIDENCE
 
 
 # System prompt for Gemini detection
@@ -104,7 +104,8 @@ class GeminiDetector:
         self,
         api_key: str = None,
         detection_model: str = DETECTION_MODEL,
-        min_confidence: float = MIN_CONFIDENCE,
+        min_face_confidence: float = MIN_FACE_CONFIDENCE,
+        min_text_confidence: float = MIN_TEXT_CONFIDENCE,
     ):
         """
         Initialize Gemini detector.
@@ -112,7 +113,8 @@ class GeminiDetector:
         Args:
             api_key: Google AI API key (if None, reads from GEMINI_API_KEY env var)
             detection_model: Gemini model to use for detection
-            min_confidence: Minimum confidence threshold for detections (0.0-1.0)
+            min_face_confidence: Minimum confidence threshold for face detections (0.0-1.0)
+            min_text_confidence: Minimum confidence threshold for text PII detections (0.0-1.0)
         """
         api_key = api_key or os.getenv("GEMINI_API_KEY")
         if not api_key:
@@ -123,7 +125,8 @@ class GeminiDetector:
 
         self.client = genai.Client(api_key=api_key)
         self.detection_model = detection_model
-        self.min_confidence = min_confidence
+        self.min_face_confidence = min_face_confidence
+        self.min_text_confidence = min_text_confidence
 
     def detect(
         self, image: Image.Image
@@ -210,8 +213,12 @@ class GeminiDetector:
             print(f"  Original bbox: {bbox_coords}")
             print(f"  Processing size: {proc_width} x {proc_height}")
 
-            # Filter by confidence threshold
-            if confidence < self.min_confidence:
+            # Filter by confidence threshold (different for faces vs text)
+            if detection_type == "face" and confidence < self.min_face_confidence:
+                print(f"  [INFO] Face confidence {confidence} below threshold {self.min_face_confidence}, skipping")
+                continue
+            elif detection_type == "text_pii" and confidence < self.min_text_confidence:
+                print(f"  [INFO] Text PII confidence {confidence} below threshold {self.min_text_confidence}, skipping")
                 continue
 
             # Parse bbox [ymin, xmin, ymax, xmax]

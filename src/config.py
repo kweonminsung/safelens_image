@@ -9,7 +9,8 @@ DETECTION_MODEL = "gemini-3-flash-preview"  # Model for PII and face detection
 IMAGEN_MODEL = "gemini-2.5-flash-image"  # Model for image generation
 
 # Detection Settings
-MIN_CONFIDENCE = 0.8
+MIN_FACE_CONFIDENCE = 0.7  # Minimum confidence for face detection
+MIN_TEXT_CONFIDENCE = 0.8  # Minimum confidence for text PII detection
 
 # Default Anonymization Methods
 DEFAULT_FACE_METHOD = ReplacementMethod.BLUR
