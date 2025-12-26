@@ -41,7 +41,7 @@ def main():
     # Step 1: Detection
     print("\n3. Running detection with Gemini...")
     result = pipeline.detect(image)
-    print(f"✓ Detection complete!")
+    print("✓ Detection complete!")
     print(f"   - Found {len(result.pii_detections)} PII instances")
     print(f"   - Found {len(result.face_detections)} faces")
     print(f"   - Image ID: {result.image_id}")

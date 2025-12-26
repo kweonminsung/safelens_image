@@ -5,7 +5,6 @@ Run this script to start the FastAPI server.
 """
 
 import uvicorn
-from src.api import app
 
 
 def main():

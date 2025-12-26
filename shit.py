@@ -1,5 +1,4 @@
 from google import genai
-import os
 
 # 1. 클라이언트 초기화
 # API 키는 환경 변수(GOOGLE_API_KEY 또는 GEMINI_API_KEY)에 설정되어 있다고 가정합니다.

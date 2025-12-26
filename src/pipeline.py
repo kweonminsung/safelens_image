@@ -4,7 +4,7 @@ Pipeline orchestrator that coordinates detection and anonymization.
 
 import uuid
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import Dict, Optional
 from PIL import Image
 from .config import MIN_CONFIDENCE, DEFAULT_FACE_METHOD, DEFAULT_TEXT_METHOD
 from .models import (
@@ -13,7 +13,6 @@ from .models import (
     FaceDetection,
     AnonymizationRequest,
     AnonymizationResult,
-    ReplacementRequest,
     ReplacementMethod,
 )
 from .gemini_detector import GeminiDetector

@@ -5,7 +5,6 @@ Image generator module using Gemini and Imagen.
 import io
 import os
 import uuid
-import base64
 from typing import Optional
 from PIL import Image, ImageDraw
 from google import genai

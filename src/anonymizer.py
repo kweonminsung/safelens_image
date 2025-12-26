@@ -3,17 +3,13 @@ Anonymization module for applying various replacement methods to detected region
 Supports both polygon and bounding box regions.
 """
 
-import io
-from typing import List, Dict, Optional, Tuple, Union
-import numpy as np
+from typing import List, Optional, Tuple
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
-import cv2
 from .models import (
     BoundingBox,
     ReplacementMethod,
     PIIDetection,
     FaceDetection,
-    ReplacementRequest,
 )
 from .config import DEFAULT_FACE_METHOD, DEFAULT_TEXT_METHOD
 
@@ -133,7 +129,7 @@ class Anonymizer:
                     return generated_image
                 else:
                     print(
-                        f"[WARNING] Generation failed for region, falling back to blur"
+                        "[WARNING] Generation failed for region, falling back to blur"
                     )
                     return self._blur_region(image, region)
             else:
@@ -195,7 +191,7 @@ class Anonymizer:
 
         try:
             font = ImageFont.truetype("arial.ttf", 12)
-        except:
+        except Exception:
             font = ImageFont.load_default()
 
         # Draw PII regions in red

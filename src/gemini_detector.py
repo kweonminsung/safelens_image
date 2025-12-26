@@ -6,8 +6,8 @@ Uses Google Gemini Vision API for detection.
 import uuid
 import os
 import json
-from typing import List, Optional
-from PIL import Image, ImageOps, ImageDraw
+from typing import List
+from PIL import Image
 import io
 import base64
 from google import genai
@@ -216,7 +216,7 @@ class GeminiDetector:
 
             # Parse bbox [ymin, xmin, ymax, xmax]
             if len(bbox_coords) != 4:
-                print(f"  [WARNING] Invalid bbox format, skipping")
+                print("  [WARNING] Invalid bbox format, skipping")
                 continue
 
             y_min, x_min, y_max, x_max = bbox_coords
@@ -226,7 +226,7 @@ class GeminiDetector:
                 c > 1 for c in bbox_coords
             ):
                 print(
-                    f"  [INFO] Detected 0-1000 normalized coords, converting to pixels"
+                    "  [INFO] Detected 0-1000 normalized coords, converting to pixels"
                 )
                 # Convert 0-1000 -> processing_image pixels
                 x_min_proc = (x_min / 1000.0) * proc_width
@@ -242,7 +242,7 @@ class GeminiDetector:
 
             # Handle 0-1 normalized coordinates (fallback)
             elif all(0 <= c <= 1.0 for c in bbox_coords):
-                print(f"  [INFO] Detected 0-1 normalized coords, converting to pixels")
+                print("  [INFO] Detected 0-1 normalized coords, converting to pixels")
                 x_min = int(x_min * orig_width)
                 x_max = int(x_max * orig_width)
                 y_min = int(y_min * orig_height)
@@ -250,13 +250,13 @@ class GeminiDetector:
 
             # Handle absolute pixel coordinates (fallback)
             else:
-                print(f"  [INFO] Detected absolute pixel coords")
+                print("  [INFO] Detected absolute pixel coords")
                 # If we resized, we need to scale back?
                 # But if model used proc_width/height, we need to know.
                 # Assuming model followed instructions and used 0-1000, this block shouldn't be hit often.
                 # If it returns pixels relative to resized image:
                 if scale_factor != 1.0 and x_max <= proc_width and y_max <= proc_height:
-                    print(f"  [INFO] Scaling up from processing size")
+                    print("  [INFO] Scaling up from processing size")
                     x_min = int(x_min / scale_factor)
                     x_max = int(x_max / scale_factor)
                     y_min = int(y_min / scale_factor)
@@ -265,7 +265,7 @@ class GeminiDetector:
             # Validate bbox
             if x_min >= x_max or y_min >= y_max:
                 print(
-                    f"  [WARNING] Invalid bbox: x_min >= x_max or y_min >= y_max, skipping"
+                    "  [WARNING] Invalid bbox: x_min >= x_max or y_min >= y_max, skipping"
                 )
                 continue
 
@@ -277,7 +277,7 @@ class GeminiDetector:
 
             # Ensure bbox still valid after clamping
             if x_min >= x_max or y_min >= y_max:
-                print(f"  [WARNING] bbox became invalid after clamping, skipping")
+                print("  [WARNING] bbox became invalid after clamping, skipping")
                 continue
 
             print(f"  Final pixel bbox: [{x_min}, {y_min}, {x_max}, {y_max}]")
