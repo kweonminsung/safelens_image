@@ -37,7 +37,7 @@ Check if the API is running.
 
 **POST** `/upload`
 
-Upload an image and receive a unique UUID for later processing.
+Upload an image and receive a unique UUID for later processing. The system automatically generates both high-quality (original) and low-quality (thumbnail) versions.
 
 **Request:**
 
@@ -138,7 +138,7 @@ curl -X POST "http://localhost:8000/detect/550e8400-e29b-41d4-a716-446655440000"
 
 **POST** `/anonymize`
 
-Apply anonymization to specific regions of the image using bounding boxes with PII type labels.
+Apply anonymization to specific regions of the image using bounding boxes with PII type labels. The system automatically generates both high-quality (original resolution) and low-quality (thumbnail) versions of the anonymized image.
 
 **Request Body:**
 
@@ -220,7 +220,7 @@ curl -X POST "http://localhost:8000/anonymize" \
 
 **GET** `/download/{image_id}`
 
-Download an image by UUID (original or anonymized).
+Download an image by UUID (original or anonymized) with quality option.
 
 **Path Parameters:**
 
@@ -228,6 +228,7 @@ Download an image by UUID (original or anonymized).
 
 **Query Parameters:**
 
+- `quality` (string, optional): Image quality - `high` (original resolution) or `low` (thumbnail) (default: "high")
 - `format` (string, optional): Output format - `png`, `jpg`, `jpeg`, `webp` (default: "png")
 
 **Response:**
@@ -237,12 +238,16 @@ Download an image by UUID (original or anonymized).
 **Examples (curl):**
 
 ```bash
-# Download original image
-curl -X GET "http://localhost:8000/download/550e8400-e29b-41d4-a716-446655440000" \
-  -o original.png
+# Download original high-quality image
+curl -X GET "http://localhost:8000/download/550e8400-e29b-41d4-a716-446655440000?quality=high" \
+  -o original_high.png
 
-# Download anonymized image (using anonymized_image_id from /anonymize response)
-curl -X GET "http://localhost:8000/download/660e8400-e29b-41d4-a716-446655440001?format=jpg" \
+# Download thumbnail
+curl -X GET "http://localhost:8000/download/550e8400-e29b-41d4-a716-446655440000?quality=low" \
+  -o original_thumb.png
+
+# Download anonymized image as JPEG
+curl -X GET "http://localhost:8000/download/660e8400-e29b-41d4-a716-446655440001?quality=high&format=jpg" \
   -o anonymized.jpg
 ```
 

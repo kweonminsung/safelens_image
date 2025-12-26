@@ -26,6 +26,7 @@ from src.models import (
     ReplacementMethod,
     BoundingBox,
 )
+from src.config import THUMBNAIL_MAX_WIDTH
 from pydantic import BaseModel
 from typing import List
 
@@ -176,9 +177,22 @@ async def upload_image(
         image_id = str(uuid.uuid4())
         pipeline._image_cache[image_id] = image.copy()
 
-        # Save to disk
+        # Generate thumbnail (low quality)
+        # Resize to max width from config while maintaining aspect ratio
+        thumbnail = image.copy()
+        if thumbnail.width > THUMBNAIL_MAX_WIDTH:
+            ratio = THUMBNAIL_MAX_WIDTH / thumbnail.width
+            new_height = int(thumbnail.height * ratio)
+            thumbnail = thumbnail.resize((THUMBNAIL_MAX_WIDTH, new_height), Image.Resampling.LANCZOS)
+        pipeline._image_cache[f"{image_id}_low"] = thumbnail
+
+        # Save to disk (high quality)
         image_path = pipeline.upload_dir / f"{image_id}.png"
         image.save(image_path, "PNG")
+        
+        # Save thumbnail
+        thumbnail_path = pipeline.upload_dir / f"{image_id}_low.png"
+        thumbnail.save(thumbnail_path, "PNG")
 
         logger.info(f"Image uploaded with ID: {image_id}")
 
@@ -268,12 +282,24 @@ async def anonymize_with_bboxes(request: BboxAnonymizeRequest) -> AnonymizeRespo
         import uuid
         anonymized_image_id = str(uuid.uuid4())
         
-        # Store anonymized image
+        # Store anonymized image (high quality)
         pipeline._image_cache[anonymized_image_id] = anonymized_image
 
-        # Save to disk
+        # Generate thumbnail (low quality)
+        thumbnail = anonymized_image.copy()
+        if thumbnail.width > THUMBNAIL_MAX_WIDTH:
+            ratio = THUMBNAIL_MAX_WIDTH / thumbnail.width
+            new_height = int(thumbnail.height * ratio)
+            thumbnail = thumbnail.resize((THUMBNAIL_MAX_WIDTH, new_height), Image.Resampling.LANCZOS)
+        pipeline._image_cache[f"{anonymized_image_id}_low"] = thumbnail
+
+        # Save to disk (high quality)
         output_path = pipeline.output_dir / f"{anonymized_image_id}.png"
         anonymized_image.save(output_path, "PNG")
+        
+        # Save thumbnail
+        thumbnail_path = pipeline.output_dir / f"{anonymized_image_id}_low.png"
+        thumbnail.save(thumbnail_path, "PNG")
 
         logger.info(f"Anonymization complete: {request.image_id} -> {anonymized_image_id}")
 
@@ -295,22 +321,32 @@ async def anonymize_with_bboxes(request: BboxAnonymizeRequest) -> AnonymizeRespo
 
 
 @app.get("/download/{image_id}")
-async def download_image(image_id: str, format: str = "png") -> Response:
+async def download_image(image_id: str, quality: str = "high", format: str = "png") -> Response:
     """
     4. Download image by UUID.
 
     Args:
         image_id: UUID of the image (original or anonymized)
+        quality: Image quality - "high" (original) or "low" (thumbnail, 512px width) (default: "high")
         format: Output format (png, jpg, webp)
 
     Returns:
         Image file
     """
     try:
-        # Get image from cache
-        image = pipeline._image_cache.get(image_id)
-        if image is None:
-            raise HTTPException(status_code=404, detail="Image not found")
+        # Validate quality parameter
+        if quality not in ["high", "low"]:
+            raise HTTPException(status_code=400, detail="Invalid quality. Use 'high' or 'low'")
+        
+        # Get image from cache based on quality
+        if quality == "low":
+            image = pipeline._image_cache.get(f"{image_id}_low")
+            if image is None:
+                raise HTTPException(status_code=404, detail="Thumbnail not found")
+        else:
+            image = pipeline._image_cache.get(image_id)
+            if image is None:
+                raise HTTPException(status_code=404, detail="Image not found")
 
         # Validate format
         format = format.lower()
@@ -366,6 +402,8 @@ async def clear_image_cache(image_id: str) -> dict:
     """
     try:
         pipeline.clear_cache(image_id)
+        # Also clear thumbnail
+        pipeline.clear_cache(f"{image_id}_low")
 
         return {"message": f"Cache cleared for image {image_id}"}
 

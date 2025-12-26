@@ -170,7 +170,7 @@ paths:
       tags:
         - images
       summary: Download Image
-      description: Download an image by UUID (original or anonymized)
+      description: Download an image by UUID (original or anonymized) with quality option
       operationId: download_image
       parameters:
         - name: image_id
@@ -181,6 +181,14 @@ paths:
             type: string
             format: uuid
             example: 550e8400-e29b-41d4-a716-446655440000
+        - name: quality
+          in: query
+          required: false
+          description: Image quality (high for original resolution, low for thumbnail)
+          schema:
+            type: string
+            enum: [high, low]
+            default: high
         - name: format
           in: query
           required: false
