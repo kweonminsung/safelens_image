@@ -92,7 +92,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "*",
-        "chrome-extension://dpnlnlbioefgkmogjamfapokgnofcobe"
+        "chrome-extension://*"
     ],  # Configure appropriately for production
     allow_credentials=True,
     allow_methods=["*"],
