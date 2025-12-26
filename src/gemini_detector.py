@@ -19,7 +19,7 @@ from .models import (
     PIIType,
     DetectionType,
 )
-from .config import MIN_CONFIDENCE
+from .config import MIN_CONFIDENCE, DETECTION_MODEL
 
 
 # System prompt for Gemini detection
@@ -103,7 +103,7 @@ class GeminiDetector:
     def __init__(
         self,
         api_key: str = None,
-        detection_model: str = "gemini-3-flash-preview",
+        detection_model: str = DETECTION_MODEL,
         min_confidence: float = MIN_CONFIDENCE,
     ):
         """

@@ -4,6 +4,10 @@ Configuration constants for SaveLens.
 
 from .models import ReplacementMethod
 
+# Model Settings
+DETECTION_MODEL = "gemini-3-flash-preview"  # Model for PII and face detection
+IMAGEN_MODEL = "gemini-2.5-flash-image"  # Model for image generation
+
 # Detection Settings
 MIN_CONFIDENCE = 0.8
 

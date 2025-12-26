@@ -9,6 +9,7 @@ from typing import Optional
 from PIL import Image, ImageDraw
 from google import genai
 from .models import BoundingBox, PIIType, PII_REPLACEMENT_VALUES
+from .config import IMAGEN_MODEL, MASK_PADDING
 
 
 class ImageGenerator:
@@ -17,9 +18,8 @@ class ImageGenerator:
     def __init__(
         self,
         api_key: str = None,
-        # imagen_model: str = "gemini-3-pro-image-preview",
-        imagen_model: str = "gemini-2.5-flash-image",
-        mask_padding: int = 10,
+        imagen_model: str = IMAGEN_MODEL,
+        mask_padding: int = MASK_PADDING,
     ):
         """
         Initialize Image Generator.
