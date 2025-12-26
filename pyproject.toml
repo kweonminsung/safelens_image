@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11,<3.13"
 dependencies = [
     "fastapi>=0.127.0",
+    "google-cloud-aiplatform>=1.132.0",
     "google-genai>=1.56.0",
     "numpy<2.0",
     "opencv-python>=4.8.0",

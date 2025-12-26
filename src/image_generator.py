@@ -52,6 +52,13 @@ class ImageGenerator:
             x1, y1, x2, y2 = region.to_xyxy()
             draw.rectangle([x1, y1, x2, y2], fill=255)
             
+            # Debug: Save mask image
+            os.makedirs("temp", exist_ok=True)
+            mask_uuid = uuid.uuid4()
+            mask_path = f"temp/debug_mask_{mask_uuid}.png"
+            mask.save(mask_path)
+            print(f"[DEBUG] Saved mask to {mask_path}")
+            
             # 2. Call Gemini Generate Content
             try:
                 from google.genai import types
@@ -64,7 +71,18 @@ class ImageGenerator:
                 )
                 
                 if label:
-                    prompt_text += f" The masked area contained a {label}, please replace it with a natural background that fits the context."
+                    # Specific handling for different PII types
+                    label_lower = label.lower()
+                    if "license" in label_lower or "plate" in label_lower or "number_plate" in label_lower:
+                        prompt_text += " The masked area contained a license plate. Replace it with a realistic license plate with DIFFERENT RANDOM numbers and letters, maintaining the same style, format, color, and appearance. The new plate must look natural and realistic."
+                    elif "phone" in label_lower or "telephone" in label_lower or "mobile" in label_lower:
+                        prompt_text += " The masked area contained a phone number. Replace it with a DIFFERENT RANDOM phone number in the same format, style, and font. The numbers must be completely different from the original."
+                    elif "id" in label_lower or "card" in label_lower or "document" in label_lower:
+                        prompt_text += f" The masked area contained sensitive identification information ({label}). Replace it with realistic but DIFFERENT RANDOM numbers/text in the same format and style."
+                    elif "address" in label_lower or "postal" in label_lower:
+                        prompt_text += " The masked area contained address information. Replace it with a DIFFERENT RANDOM address in the same format and style."
+                    else:
+                        prompt_text += f" The masked area contained a {label}. Please replace it with a natural background that fits the context perfectly."
                 
                 # Add coordinates to prompt
                 prompt_text += f" The coordinates of the area to be modified are: ({x1}, {y1}) to ({x2}, {y2})."
@@ -93,9 +111,16 @@ class ImageGenerator:
                             debug_path = f"temp/debug_gen_{uuid.uuid4()}.png"
                             gen_img.save(debug_path)
                             print(f"[DEBUG] Saved generated image to {debug_path}")
+                            print(f"[DEBUG] Original size: {image.size}, Generated size: {gen_img.size}")
+                            
+                            # Check if generated image size matches original
+                            if gen_img.size != image.size:
+                                print(f"[WARNING] Size mismatch! Resizing {gen_img.size} -> {image.size}")
+                                gen_img = gen_img.resize(image.size, Image.Resampling.LANCZOS)
 
                             # Crop the patch from the generated full image
                             patch = gen_img.crop((x1, y1, x2, y2))
+                            print(f"[DEBUG] Patch size: {patch.size}, Expected: ({x2-x1}, {y2-y1})")
                             return patch
                 
                 print("[WARNING] No image part found in response.")

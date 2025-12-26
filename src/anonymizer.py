@@ -54,12 +54,42 @@ class Anonymizer:
         # Work on a copy
         result = image.copy()
         
+        # Group GENERATE methods to batch process them
+        generate_items = []
+        other_items = []
+        
         for item in replacements:
             if len(item) == 4:
                 region, method, custom_data, label = item
             else:
                 region, method, custom_data = item
                 label = None
+            
+            if method == ReplacementMethod.GENERATE:
+                generate_items.append((region, method, custom_data, label))
+            else:
+                other_items.append((region, method, custom_data, label))
+        
+        # Batch process all GENERATE items with one API call
+        if generate_items and self.generator and hasattr(self.generator, 'generate_replacements_batch'):
+            regions = [item[0] for item in generate_items]
+            labels = [item[3] for item in generate_items]
+            
+            generated_image = self.generator.generate_replacements_batch(result, regions, labels)
+            if generated_image:
+                result = generated_image
+            else:
+                # Fallback to blur if generation fails
+                print("[WARNING] Batch generation failed, falling back to blur")
+                for region, _, _, _ in generate_items:
+                    result = self._blur_region(result, region)
+        elif generate_items:
+            # Fallback to individual processing if batch not available
+            for region, method, custom_data, label in generate_items:
+                result = self._apply_replacement(result, region, method, custom_data, label)
+        
+        # Process other methods individually
+        for region, method, custom_data, label in other_items:
             result = self._apply_replacement(result, region, method, custom_data, label)
         
         return result
@@ -74,46 +104,29 @@ class Anonymizer:
     ) -> Image.Image:
         """Apply a single replacement to an image region."""
         
-        if method == ReplacementMethod.GENERATE:
-            return self._generate_region(image, region, label)
-        elif method == ReplacementMethod.BLUR:
+        if method == ReplacementMethod.BLUR:
             return self._blur_region(image, region)
         elif method == ReplacementMethod.BLACK_BOX:
             return self._black_box(image, region)
+        elif method == ReplacementMethod.GENERATE:
+            # Individual GENERATE fallback
+            if self.generator and hasattr(self.generator, 'generate_replacement'):
+                patch = self.generator.generate_replacement(image, region, label)
+                if patch:
+                    result = image.copy()
+                    x1, y1, x2, y2 = region.to_xyxy()
+                    result.paste(patch, (x1, y1))
+                    return result
+                else:
+                    print(f"[WARNING] Generation failed for region, falling back to blur")
+                    return self._blur_region(image, region)
+            else:
+                print("[WARNING] No generator available, falling back to blur")
+                return self._blur_region(image, region)
         else:
             # Default to black box for unknown methods
             return self._black_box(image, region)
     
-    def _get_region_mask(self, image: Image.Image, region: BoundingBox) -> Image.Image:
-        """Create a mask for the given bounding box region."""
-        mask = Image.new('L', image.size, 0)
-        draw = ImageDraw.Draw(mask)
-        x1, y1, x2, y2 = region.to_xyxy()
-        draw.rectangle([x1, y1, x2, y2], fill=255)
-        return mask
-    
-    def _generate_region(self, image: Image.Image, region: BoundingBox, label: str = None) -> Image.Image:
-        """Use generative AI to fill the region."""
-        if not self.generator:
-            print("Warning: No generator provided for GENERATE method. Falling back to BLUR.")
-            return self._blur_region(image, region)
-        
-        try:
-            # Call generator to get a patch
-            patch = self.generator.generate_replacement(image, region, label)
-            if patch:
-                result = image.copy()
-                x1, y1, x2, y2 = region.to_xyxy()
-                # Resize patch to fit region if needed
-                patch = patch.resize((region.width, region.height))
-                result.paste(patch, (x1, y1))
-                return result
-            else:
-                return self._blur_region(image, region)
-        except Exception as e:
-            print(f"Error in generation: {e}")
-            return self._blur_region(image, region)
-
     def _black_box(self, image: Image.Image, region: BoundingBox) -> Image.Image:
         """Draw a black rectangle over the region."""
         result = image.copy()
