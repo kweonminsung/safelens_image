@@ -21,6 +21,20 @@ class PIIType(str, Enum):
     OTHER = "other"
 
 
+# Default replacement values for each PII type when using GENERATE method
+PII_REPLACEMENT_VALUES = {
+    PIIType.PHONE: "010-0000-0000",
+    PIIType.EMAIL: "privacy@example.com",
+    PIIType.ADDRESS: "Seoul, South Korea 12345",
+    PIIType.NAME: "Privacy User",
+    PIIType.LICENSE_PLATE: "12AB-3456",
+    PIIType.ID_NUMBER: "000000-0000000",
+    PIIType.CREDIT_CARD: "0000-0000-0000-0000",
+    PIIType.DATE_OF_BIRTH: "2000-01-01",
+    PIIType.OTHER: None,  # Use random/background fill for unspecified types
+}
+
+
 class DetectionType(str, Enum):
     """Types of detections in an image."""
     TEXT_PII = "text_pii"
@@ -123,6 +137,7 @@ class DetectionResult(BaseModel):
 class ReplacementRequest(BaseModel):
     """Request to replace specific detections."""
     detection_id: str = Field(..., description="ID of the detection to replace")
+    detection_type: str = Field(..., description="Type of detection (pii or face)")
     method: ReplacementMethod = Field(..., description="Replacement method to use")
     custom_text: Optional[str] = Field(
         None, description="Custom text for synthetic_text method"

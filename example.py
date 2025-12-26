@@ -10,16 +10,18 @@ from src.models import AnonymizationRequest, ReplacementRequest, ReplacementMeth
 # Load environment variables from .env file
 load_dotenv()
 
+# Configuration
+IMAGE_PATH = "public/example3.jpg"  # Change this to use a different image
 
 def main():
-    """Run the example pipeline with public/example1.jpg."""
+    """Run the example pipeline with the specified image."""
     print("=" * 60)
     print("SaveLens Image Privacy Sanitization - Example Usage")
     print("=" * 60)
     
     # Load example image
     print("\n1. Loading example image...")
-    image_path = Path("public/example1.jpg")
+    image_path = Path(IMAGE_PATH)
     if not image_path.exists():
         print(f"❌ Example image not found: {image_path}")
         print("   Please place an image at public/example1.jpg")
