@@ -25,7 +25,7 @@ DETECTION_PROMPT_TEMPLATE = """You are an AI system performing privacy-safe imag
 
 PHASE 1 — DETECTION (NO MODIFICATION)
 
-Analyze the provided image and DETECT ONLY the following:
+Analyze the provided image (Resolution: {width}x{height}) and DETECT ONLY the following:
 
 1. **Text containing personal information (PII)** - ONLY detect if text is CLEARLY VISIBLE and LEGIBLE:
    - Phone numbers (with digits visible)
@@ -53,18 +53,18 @@ For EACH detected item, output a JSON object with:
 - id: unique string identifier
 - type: "text_pii" or "face"
 - label: for text_pii: "phone" | "address" | "name" | "email" | "license_plate" ; for face: "face"
-- bbox: bounding box as [x_min, y_min, x_max, y_max] where:
+- bbox: bounding box as [ymin, xmin, ymax, xmax] where:
   * VALUES MUST BE INTEGERS BETWEEN 0 AND 1000 (NORMALIZED COORDINATES)
   * 0 represents top/left edge, 1000 represents bottom/right edge
-  * Example: [0, 0, 1000, 1000] is the full image
-  * [x_min, y_min, x_max, y_max] order
+  * The image resolution is {width}x{height}, but you MUST return normalized 0-1000 coordinates relative to this full size.
+  * [ymin, xmin, ymax, xmax] order (Standard Gemini format)
 - confidence: number between 0 and 1
 
 CRITICAL COORDINATE RULES:
-- Coordinates are NORMALIZED to 0-1000 scale
+- Coordinates are NORMALIZED to 0-1000 scale relative to the full {width}x{height} image
 - x values range from 0 to 1000
 - y values range from 0 to 1000
-- Format: [x_min, y_min, x_max, y_max] where x_min < x_max and y_min < y_max
+- Format: [ymin, xmin, ymax, xmax] where ymin < ymax and xmin < xmax
 - DO NOT use pixel values, use 0-1000 scale
 
 IMPORTANT:
@@ -80,14 +80,14 @@ Output format:
     "id": "uuid-1",
     "type": "text_pii",
     "label": "phone",
-    "bbox": [100, 200, 300, 250],
+    "bbox": [200, 100, 250, 300],
     "confidence": 0.95
   }},
   {{
     "id": "uuid-2",
     "type": "face",
     "label": "face",
-    "bbox": [500, 600, 800, 900],
+    "bbox": [600, 500, 900, 800],
     "confidence": 0.98
   }}
 ]
@@ -101,7 +101,9 @@ class GeminiDetector:
     def __init__(
         self, 
         api_key: str = None, 
-        model_name: str = "gemini-2.5-flash-image",
+        # model_name: str = "gemini-2.5-flash-image",
+        model_name: str = "gemini-3-flash-preview",
+        # model_name: str = "gemini-3-pro-image-preview",
         min_confidence: float = 0.7
     ):
         """
@@ -139,27 +141,11 @@ class GeminiDetector:
         orig_width, orig_height = image.size
         print(f"\n[INFO] Processing image: {orig_width}x{orig_height} pixels")
         
-        # Resize image if too large (Gemini works better with standard sizes)
-        # Max dimension 1024px is usually a good balance for accuracy/speed
-        MAX_DIMENSION = 1024
+        # Skip resizing to ensure bbox coordinates map directly to original image
         scale_factor = 1.0
-        
-        if orig_width > MAX_DIMENSION or orig_height > MAX_DIMENSION:
-            if orig_width > orig_height:
-                scale_factor = MAX_DIMENSION / orig_width
-                new_width = MAX_DIMENSION
-                new_height = int(orig_height * scale_factor)
-            else:
-                scale_factor = MAX_DIMENSION / orig_height
-                new_height = MAX_DIMENSION
-                new_width = int(orig_width * scale_factor)
-                
-            print(f"[INFO] Resizing image to {new_width}x{new_height} (scale: {scale_factor:.4f}) for better detection")
-            processing_image = image.resize((new_width, new_height), Image.LANCZOS)
-            proc_width, proc_height = new_width, new_height
-        else:
-            processing_image = image
-            proc_width, proc_height = orig_width, orig_height
+        processing_image = image
+        proc_width, proc_height = orig_width, orig_height
+        print(f"[INFO] Using original image size: {proc_width}x{proc_height}")
         
         # Format prompt with processing image dimensions
         detection_prompt = DETECTION_PROMPT_TEMPLATE.format(width=proc_width, height=proc_height)
@@ -223,20 +209,27 @@ class GeminiDetector:
             if confidence < self.min_confidence:
                 continue
             
-            # Parse bbox [x_min, y_min, x_max, y_max]
+            # Parse bbox [ymin, xmin, ymax, xmax]
             if len(bbox_coords) != 4:
                 print(f"  [WARNING] Invalid bbox format, skipping")
                 continue
                 
-            x_min, y_min, x_max, y_max = bbox_coords
+            y_min, x_min, y_max, x_max = bbox_coords
             
             # Handle 0-1000 normalized coordinates (preferred)
             if all(0 <= c <= 1000 for c in bbox_coords) and any(c > 1 for c in bbox_coords):
                 print(f"  [INFO] Detected 0-1000 normalized coords, converting to pixels")
-                x_min = int((x_min / 1000.0) * orig_width)
-                x_max = int((x_max / 1000.0) * orig_width)
-                y_min = int((y_min / 1000.0) * orig_height)
-                y_max = int((y_max / 1000.0) * orig_height)
+                # Convert 0-1000 -> processing_image pixels
+                x_min_proc = (x_min / 1000.0) * proc_width
+                x_max_proc = (x_max / 1000.0) * proc_width
+                y_min_proc = (y_min / 1000.0) * proc_height
+                y_max_proc = (y_max / 1000.0) * proc_height
+                
+                # Map processing_image pixels -> original image pixels
+                x_min = int(x_min_proc / scale_factor)
+                x_max = int(x_max_proc / scale_factor)
+                y_min = int(y_min_proc / scale_factor)
+                y_max = int(y_max_proc / scale_factor)
             
             # Handle 0-1 normalized coordinates (fallback)
             elif all(0 <= c <= 1.0 for c in bbox_coords):
