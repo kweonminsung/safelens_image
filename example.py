@@ -12,8 +12,7 @@ from src.models import AnonymizationRequest, ReplacementRequest, ReplacementMeth
 load_dotenv()
 
 # Configuration
-IMAGE_PATH = "public/example7.jpg"  # Change this to use a different image
-
+IMAGE_PATH = "public/example8.jpg"  # Change this to use a different image
 
 def main():
     """Run the example pipeline with the specified image."""

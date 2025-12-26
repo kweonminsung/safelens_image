@@ -68,3 +68,4 @@ sample_*.png
 anonymized_*.png
 preview_*.png
 
+!public/*.jpg
