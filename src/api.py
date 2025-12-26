@@ -23,8 +23,6 @@ from PIL import Image
 from src.pipeline import PrivacyPipeline
 from src.models import (
     DetectionResult,
-    AnonymizationRequest,
-    AnonymizationResult,
     ReplacementMethod,
     BoundingBox,
 )
@@ -176,7 +174,7 @@ async def upload_image(
 
         logger.info(f"Image uploaded with ID: {image_id}")
 
-        return UploadResponse(image_id=image_id, message=f"Image uploaded successfully")
+        return UploadResponse(image_id=image_id, message="Image uploaded successfully")
 
     except Exception as e:
         logger.error(f"Error uploading image: {str(e)}", exc_info=True)
