@@ -71,22 +71,24 @@ class Anonymizer:
                 other_items.append((region, method, custom_data, label))
         
         # Batch process all GENERATE items with one API call
-        if generate_items and self.generator and hasattr(self.generator, 'generate_replacements_batch'):
-            regions = [item[0] for item in generate_items]
-            labels = [item[3] for item in generate_items]
-            
-            generated_image = self.generator.generate_replacements_batch(result, regions, labels)
-            if generated_image:
-                result = generated_image
+        if generate_items:
+            if self.generator and hasattr(self.generator, 'generate_replacements_batch'):
+                regions = [item[0] for item in generate_items]
+                labels = [item[3] for item in generate_items]
+                
+                generated_image = self.generator.generate_replacements_batch(result, regions, labels)
+                if generated_image:
+                    result = generated_image
+                else:
+                    # Fallback to blur if generation fails
+                    print("[WARNING] Batch generation failed, falling back to blur")
+                    for region, _, _, _ in generate_items:
+                        result = self._blur_region(result, region)
             else:
-                # Fallback to blur if generation fails
-                print("[WARNING] Batch generation failed, falling back to blur")
-                for region, _, _, _ in generate_items:
-                    result = self._blur_region(result, region)
-        elif generate_items:
-            # Fallback to individual processing if batch not available
-            for region, method, custom_data, label in generate_items:
-                result = self._apply_replacement(result, region, method, custom_data, label)
+                # Fallback to individual processing if batch not available
+                print("[WARNING] Batch generation method not available, processing individually")
+                for region, method, custom_data, label in generate_items:
+                    result = self._apply_replacement(result, region, method, custom_data, label)
         
         # Process other methods individually
         for region, method, custom_data, label in other_items:
@@ -111,12 +113,10 @@ class Anonymizer:
         elif method == ReplacementMethod.GENERATE:
             # Individual GENERATE fallback
             if self.generator and hasattr(self.generator, 'generate_replacement'):
-                patch = self.generator.generate_replacement(image, region, label)
-                if patch:
-                    result = image.copy()
-                    x1, y1, x2, y2 = region.to_xyxy()
-                    result.paste(patch, (x1, y1))
-                    return result
+                generated_image = self.generator.generate_replacement(image, region, label)
+                if generated_image:
+                    # Generator now returns full image, not a patch
+                    return generated_image
                 else:
                     print(f"[WARNING] Generation failed for region, falling back to blur")
                     return self._blur_region(image, region)

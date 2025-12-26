@@ -11,7 +11,7 @@ from src.models import AnonymizationRequest, ReplacementRequest, ReplacementMeth
 load_dotenv()
 
 # Configuration
-IMAGE_PATH = "public/example3.jpg"  # Change this to use a different image
+IMAGE_PATH = "public/example2.jpg"  # Change this to use a different image
 
 def main():
     """Run the example pipeline with the specified image."""
@@ -91,7 +91,7 @@ def main():
         replacements.append(ReplacementRequest(
             detection_id=face.detection_id,
             detection_type="face",
-            method=ReplacementMethod.BLUR
+            method=ReplacementMethod.GENERATE
         ))
     
     print(f"✓ Prepared {len(replacements)} replacements")
