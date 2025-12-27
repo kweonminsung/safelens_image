@@ -1,3 +1,3 @@
-"""SaveLens Image Privacy Sanitization Pipeline."""
+"""SafeLens Image Privacy Sanitization Pipeline."""
 
 __version__ = "0.1.0"

@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: SaveLens Image Privacy Sanitization API
+  title: SafeLens Image Privacy Sanitization API
   description: |
     Privacy-safe image sanitization API with PII detection and face detection using Google Gemini Vision API.
 
@@ -15,7 +15,7 @@ info:
     - **ReDoc**: http://localhost:8000/redoc
   version: 0.1.0
   contact:
-    name: SaveLens Support
+    name: SafeLens Support
     email: support@example.com
   license:
     name: MIT
@@ -54,7 +54,7 @@ paths:
                 properties:
                   service:
                     type: string
-                    example: SaveLens Image Privacy Sanitization API
+                    example: SafeLens Image Privacy Sanitization API
                   version:
                     type: string
                     example: 0.1.0

@@ -1,4 +1,4 @@
-# SaveLens Image Privacy Sanitization API
+# SafeLens Image Privacy Sanitization API
 
 Privacy-safe image sanitization API with PII detection and face detection using Google Gemini Vision API.
 
@@ -25,7 +25,7 @@ Check if the API is running.
 
 ```json
 {
-  "service": "SaveLens Image Privacy Sanitization API",
+  "service": "SafeLens Image Privacy Sanitization API",
   "version": "0.1.0",
   "status": "healthy"
 }

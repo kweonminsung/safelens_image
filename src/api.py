@@ -81,7 +81,7 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(
-    title="SaveLens Image Privacy Sanitization API",
+    title="SafeLens Image Privacy Sanitization API",
     description="Privacy-safe image sanitization with PII detection and face detection",
     version="0.1.0",
     lifespan=lifespan,
@@ -104,7 +104,7 @@ app.add_middleware(
 async def root():
     """Health check endpoint."""
     return {
-        "service": "SaveLens Image Privacy Sanitization API",
+        "service": "SafeLens Image Privacy Sanitization API",
         "version": "0.1.0",
         "status": "healthy",
     }

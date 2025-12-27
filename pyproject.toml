@@ -1,5 +1,5 @@
 [project]
-name = "savelens-image"
+name = "safelens-image"
 version = "0.1.0"
 description = "Privacy-safe image sanitization pipeline with PII detection and face detection using Gemini Vision API"
 readme = "README.md"

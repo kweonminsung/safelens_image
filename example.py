@@ -1,5 +1,5 @@
 """
-Example usage script demonstrating the SaveLens pipeline with real image.
+Example usage script demonstrating the SafeLens pipeline with real image.
 """
 
 from pathlib import Path
@@ -12,12 +12,12 @@ from src.models import AnonymizationRequest, ReplacementRequest, ReplacementMeth
 load_dotenv()
 
 # Configuration
-IMAGE_PATH = "public/example8.jpg"  # Change this to use a different image
+IMAGE_PATH = "public/example1.jpg"  # Change this to use a different image
 
 def main():
     """Run the example pipeline with the specified image."""
     print("=" * 60)
-    print("SaveLens Image Privacy Sanitization - Example Usage")
+    print("SafeLens Image Privacy Sanitization - Example Usage")
     print("=" * 60)
 
     # Load example image

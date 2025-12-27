@@ -1,5 +1,5 @@
 """
-Configuration constants for SaveLens.
+Configuration constants for SafeLens.
 """
 
 from .models import ReplacementMethod
